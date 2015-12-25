@@ -129,7 +129,6 @@ public:
 
         [window setContentView:view];
         [window setTitle:@"glretrace"];
-
     }
 
     ~CocoaDrawable() {
@@ -144,6 +143,8 @@ public:
         }
 
         [window setContentSize:NSMakeSize(w, h)];
+
+        processEvents();
 
         if (currentContext != nil) {
             [currentContext update];
@@ -214,7 +215,11 @@ init(void) {
 
     [NSApplication sharedApplication];
 
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+
     [NSApp finishLaunching];
+
+    [NSApp activateIgnoringOtherApps:YES];
 }
 
 
