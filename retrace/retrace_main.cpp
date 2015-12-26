@@ -96,7 +96,7 @@ unsigned callNo = 0;
 
 
 static void
-takeSnapshot(unsigned call_no);
+takeSnapshot(unsigned call_no, trace::Call &call);
 
 
 void
@@ -107,7 +107,7 @@ frameComplete(trace::Call &call) {
         snapshotFrequency.contains(call)) {
         // This call doesn't have the end of frame flag, so take any snapshot
         // now.
-        takeSnapshot(call.no);
+        takeSnapshot(call.no, call);
     }
 }
 
@@ -145,7 +145,7 @@ static StateWriterFactory stateWriterFactory = createJSONStateWriter;
  * Take snapshots.
  */
 static void
-takeSnapshot(unsigned call_no) {
+takeSnapshot(unsigned call_no, trace::Call &call) {
     static unsigned snapshot_no = 0;
 
     assert(dumpingSnapshots);
@@ -179,18 +179,81 @@ takeSnapshot(unsigned call_no) {
                 break;
             }
         } else {
-            os::String filename = os::String::format("%s%010u.png",
+
+			os::String filename = os::String::format("%s%010u ",
+				snapshotPrefix,
+				useCallNos ? call_no : snapshot_no);
+
+			os::String extraaids = "";
+			if (strcmp(call.sig->name, "glDrawRangeElements") == 0)
+			{
+				int arg1 = call.args[1].value->toSInt();
+				int arg2 = call.args[2].value->toSInt();
+				int arg3 = call.args[3].value->toSInt();
+				extraaids = os::String::format("%s %i %i %i", call.sig->name, arg1, arg2, arg3);
+			}
+			else if (strcmp(call.sig->name, "glDrawElements") == 0)
+			{
+
+				trace::Blob* indicesArgument = (trace::Blob*)call.args[3].value;
+
+				unsigned int bufferSize = indicesArgument->size;
+				unsigned __int16 * thebuff = (unsigned __int16 *)indicesArgument->buf;
+
+				int arg1 = call.args[1].value->toSInt();
+				extraaids = os::String::format("%s %i size=%u data=", call.sig->name, arg1, bufferSize);
+
+				printf("glDrawElement, buffer size: '%u', data: ", bufferSize);
+
+				int amountOfValues = 16;
+				if (!IsBadReadPtr(thebuff, amountOfValues * 2))
+				{
+					for (int i = 0; i < 16; i++)
+					{
+						printf("%hu ", thebuff[i]);
+						extraaids.append(os::String::format("%hu", thebuff[i]));
+						if (i != 15)
+						{
+							extraaids.append(",");
+						}
+					}
+				}
+				printf("\n");
+			}
+			else
+			{
+				extraaids = os::String::format("%s", call.sig->name);
+			}
+
+
+			os::String finalFileName = os::String::format("%s%s.pn", filename, extraaids);
+
+
+			/*std::stringstream outputdinges;
+			outputdinges << filename << extraaids << ".png";*/
+
+			// Alpha channel often has bogus data, so strip it when writing
+			// PNG images to disk to simplify visualization.
+			bool strip_alpha = true;
+
+			if (src->writePNG(finalFileName, strip_alpha) &&
+				retrace::verbosity >= 0) {
+				std::cout << "Wrote " << filename << "\n";
+			}
+
+
+            /*os::String filename = os::String::format("%s%010u.png",
                                                      snapshotPrefix,
-                                                     useCallNos ? call_no : snapshot_no);
+                                                     useCallNos ? call_no : snapshot_no);*/
 
-            // Alpha channel often has bogus data, so strip it when writing
-            // PNG images to disk to simplify visualization.
-            bool strip_alpha = true;
+            //// Alpha channel often has bogus data, so strip it when writing
+            //// PNG images to disk to simplify visualization.
+            //bool strip_alpha = true;
 
-            if (src->writePNG(filename, strip_alpha) &&
-                retrace::verbosity >= 0) {
-                std::cout << "Wrote " << filename << "\n";
-            }
+            //if (src->writePNG(filename, strip_alpha) &&
+            //    retrace::verbosity >= 0) {
+            //    std::cout << "Wrote " << filename << "\n";
+            //}
         }
     }
 
@@ -222,11 +285,11 @@ retraceCall(trace::Call *call) {
         if (call->flags & trace::CALL_FLAG_END_FRAME) {
             // For swapbuffers/presents we still use this
             // call number, spite not have been executed yet.
-            takeSnapshot(call->no);
+            takeSnapshot(call->no, *call);
         } else {
             // Whereas for ordinate fbo/rendertarget changes we
             // use the previous call's number.
-            takeSnapshot(call->no - 1);
+            takeSnapshot(call->no - 1, *call);
         }
     }
 
@@ -234,7 +297,7 @@ retraceCall(trace::Call *call) {
 
     if (doSnapshot) {
         if (!swapRenderTarget) {
-            takeSnapshot(call->no);
+            takeSnapshot(call->no, *call);
         }
         if (call->no >= snapshotFrequency.getLast()) {
             exit(0);
