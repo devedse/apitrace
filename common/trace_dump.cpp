@@ -33,6 +33,8 @@
 #include "trace_dump.hpp"
 #include "guids.hpp"
 
+#include <sstream>
+
 
 namespace trace {
 
@@ -242,7 +244,26 @@ public:
     }
 
     void visit(Blob *blob) {
-        os << pointer << "blob(" << blob->size << ")" << normal;
+		
+		int max = blob->size;
+		if (max > 10) {
+			max = 10;
+		}
+
+		std::string superstring;
+
+		for (int i = 0; i < max; i++) {
+
+			char blahhh = blob->buf[i];
+			superstring += blahhh;
+
+			int ccc = superstring.length();
+			if (i != max - 1) {
+				superstring += ",";
+			}
+		}
+
+        os << pointer << "blob(" << blob->size << ": " << superstring.c_str() << ")" << normal;
     }
 
     void visit(Pointer *p) {
