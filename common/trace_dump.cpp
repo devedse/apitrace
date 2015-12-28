@@ -247,8 +247,8 @@ public:
 		const int theMaxToDisplay = 20;
 		
 		int max = blob->size;
-		if (max > 20) {
-			max = 20;
+		if (max > theMaxToDisplay) {
+			max = theMaxToDisplay;
 		}
 
 		std::stringstream superstring;
