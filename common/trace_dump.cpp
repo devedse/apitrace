@@ -243,28 +243,29 @@ public:
         }
     }
 
-    void visit(Blob *blob) {
+	void visit(Blob *blob) {
+		const int theMaxToDisplay = 20;
 		
 		int max = blob->size;
-		if (max > 10) {
-			max = 10;
+		if (max > 20) {
+			max = 20;
 		}
 
-		std::string superstring;
+		std::stringstream superstring;
 
 		for (int i = 0; i < max; i++) {
 
-			char blahhh = blob->buf[i];
-			superstring += blahhh;
+			int blahhh = blob->buf[i];
+			superstring << blahhh;
 
-			int ccc = superstring.length();
+			//int ccc = superstring.length();
 			if (i != max - 1) {
-				superstring += ",";
+				superstring << ",";
 			}
 		}
 
-        os << pointer << "blob(" << blob->size << ": " << superstring.c_str() << ")" << normal;
-    }
+		os << pointer << "blob(" << blob->size << ": " << superstring.str() << ")" << normal;
+	}
 
     void visit(Pointer *p) {
         os << pointer << "0x" << std::hex << p->value << std::dec << normal;
